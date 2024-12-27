@@ -1,48 +1,35 @@
-name: CI/CD Pipeline
-
+name: deploy
 on:
   push:
-    branches:
-      - main
-
+    branches: [master] # main 分支有 push 时触发
+    paths-ignore: # 下列文件的变更不触发部署，可以自行添加
+      - README.md
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: 检出代码
-      - name: Checkout code
+      # 下载源码
+      # 这一步是检出你的仓库并下载里面的代码到runner中,actions/checkout@v2是官方自己造的轮子，直接拿来用就行
+      - name: Checkout
         uses: actions/checkout@v2
 
-      # Step 2: 设置 SSH 环境
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh  
-          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa  
-          chmod 600 ~/.ssh/id_rsa  
-          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+      # 打包构建
+      - name: Build
+        uses: actions/setup-node@master
+        with:
+          node-version: "20.x"
+      - run: npm install # 安装依赖
+      - run: npm run build # 打包
 
-      # Step 3: 测试 SSH 连接
-      - name: Test SSH Connection
-        run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo Connection successful"
-
-      # Step 4: 创建远程目录
-      - name: Create directory on remote server
-        run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "mkdir -p /var/www/nginx_project"
-
-      # Step 5: 使用 rsync 增量传输构建后的代码到远程服务器
-      - name: Transfer code to remote server
-        run: |
-          # 确保在本地构建（假设使用 npm build）  
-          npm install  
-          npm run build  
-
-          # 使用 rsync 同步构建后的文件  
-          rsync -avz --exclude 'node_modules' --exclude '.env' -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" ./dist/ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/nginx_project
-
-      # Step 6: 在远程服务器上重启 Nginx
-      - name: Restart Nginx on remote server
-        run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "sudo systemctl restart nginx"
+      # 部署到 GitHub pages
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3 # 使用部署到 GitHub pages 的 action
+        with:
+          # 部署到 gh-pages 分支
+          branch: gh-pages
+          # deploy_key: ${{ secrets.CICDDEMO }} # 部署密钥，在项目的 Settings/Secrets 中配置
+          publish_dir: ./dist # 部署打包后的 dist 目录
+          github_token: ${{ secrets.LH }} # secret 名
+          user_name: ${{ secrets.MY_USER_NAME }}
+          user_email: ${{ secrets.MY_USER_EMAIL }}
+          commit_message: 自动部署 # 部署时的 git 提交信息，自由填写
