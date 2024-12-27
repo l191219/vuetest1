@@ -1,0 +1,48 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: 设置 SSH 环境
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh  
+          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa  
+          chmod 600 ~/.ssh/id_rsa  
+          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      # Step 3: 测试 SSH 连接
+      - name: Test SSH Connection
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo Connection successful"
+
+      # Step 4: 创建远程目录
+      - name: Create directory on remote server
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "mkdir -p /var/www/nginx_project"
+
+      # Step 5: 使用 rsync 增量传输构建后的代码到远程服务器
+      - name: Transfer code to remote server
+        run: |
+          # 确保在本地构建（假设使用 npm build）  
+          npm install  
+          npm run build  
+
+          # 使用 rsync 同步构建后的文件  
+          rsync -avz --exclude 'node_modules' --exclude '.env' -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" ./dist/ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/nginx_project
+
+      # Step 6: 在远程服务器上重启 Nginx
+      - name: Restart Nginx on remote server
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "sudo systemctl restart nginx"
