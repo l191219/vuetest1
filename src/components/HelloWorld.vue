@@ -26,7 +26,7 @@ const count = ref(0);
     >, the official Vue + Vite starter
   </p>
   <p>
-    黑黑恶黑按时艰苦的环境爱看 Learn more about IDE Support for Vue in the
+    按时鉴定会就卡死的
     <a
       href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
       target="_blank"
