@@ -1,11 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { ref } from "vue";
 
 defineProps({
   msg: String,
-})
+});
 
-const count = ref(0)
+const count = ref(0);
 </script>
 
 <template>
@@ -26,8 +26,7 @@ const count = ref(0)
     >, the official Vue + Vite starter
   </p>
   <p>
-    黑黑恶黑
-    Learn more about IDE Support for Vue in the
+    黑黑恶黑按时艰苦的环境爱看 Learn more about IDE Support for Vue in the
     <a
       href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
       target="_blank"
